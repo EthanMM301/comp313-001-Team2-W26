@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>GoLocal</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f5f5f5;
+}
+
+header {
+  background: #ff7a18;
+  padding: 16px;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+nav button {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  padding: 8px 14px;
+  border-radius: 20px;
+  color: white;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+nav button.active {
+  background: white;
+  color: #ff7a18;
+}
+
+main {
+  max-width: 900px;
+  margin: 20px auto;
+  padding: 0 15px;
+}
+
+.section {
+  display: none;
+}
+
+.section.active {
+  display: block;
+}
+
+.card {
+  background: white;
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+input, select {
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.search-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+button.primary {
+  background: #ff7a18;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+}
+
+.event-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px,1fr));
+  gap: 12px;
+}
+
+.event-card {
+  background: white;
+  padding: 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid #eee;
+}
+
+.event-card:hover {
+  background: #fafafa;
+}
+
+.event-title {
+  font-weight: bold;
+  margin-top: 5px;
+}
+
+.event-meta {
+  font-size: 0.85rem;
+  color: #555;
+  margin-top: 2px;
+}
+
+.auth-tabs {
+  display: flex;
+  gap: 8px;
+  background: #eee;
+  padding: 4px;
+  border-radius: 20px;
+}
+
+.auth-tab {
+  flex: 1;
+  text-align: center;
+  padding: 8px 0;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.auth-tab.active {
+  background: white;
+}
+
+.auth-form {
+  display: none;
+  margin-top: 10px;
+}
+
+.auth-form.active {
+  display: block;
+}
+
+.modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: none;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-bg.active {
+  display: flex;
+}
+
+.modal-box {
+  background: white;
+  padding: 18px;
+  border-radius: 10px;
+  width: 350px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h2 style="margin:0;">GoLocal</h2>
+  <nav>
+    <button class="active" data-sec="search-sec">Search</button>
+    <button data-sec="auth-sec">Login</button>
+  </nav>
+</header>
+
+<main>
+
+<section id="search-sec" class="section active">
+  <div class="card">
+    <h3>Search Events</h3>
+    <div class="search-grid">
+      <select id="category">
+        <option value="">All</option>
+        <option>Music</option>
+        <option>Sports</option>
+        <option>Art</option>
+        <option>Food</option>
+      </select>
+      <input id="location" type="text" placeholder="Location">
+      <button class="primary" id="search-btn">Search</button>
+    </div>
+  </div>
+
+  <h3 style="margin-bottom:8px;">Results</h3>
+  <div class="event-grid" id="event-grid"></div>
+</section>
+
+<section id="auth-sec" class="section">
+  <div class="card">
+    <div class="auth-tabs">
+      <div class="auth-tab active" data-form="login">Login</div>
+      <div class="auth-tab" data-form="signup">Sign Up</div>
+    </div>
+
+    <form id="login" class="auth-form active">
+      <input type="text" placeholder="Email" style="margin-top:8px;">
+      <input type="password" placeholder="Password" style="margin-top:8px;">
+      <button class="primary" style="margin-top:10px;">Login</button>
+    </form>
+
+    <form id="signup" class="auth-form">
+      <input type="text" placeholder="Name" style="margin-top:8px;">
+      <input type="text" placeholder="Email" style="margin-top:8px;">
+      <input type="password" placeholder="Password" style="margin-top:8px;">
+      <button class="primary" style="margin-top:10px;">Create Account</button>
+    </form>
+  </div>
+</section>
+
+</main>
+
+<div class="modal-bg" id="modal">
+  <div class="modal-box">
+    <h3 id="m-title"></h3>
+    <p id="m-cat"></p>
+    <p id="m-loc"></p>
+    <p id="m-time"></p>
+    <p id="m-desc"></p>
+    <button class="primary" onclick="closeModal()" style="margin-top:8px;">Close</button>
+  </div>
+</div>
+
+<script>
+const events = [
+  { title:"Rooftop Concert", category:"Music", location:"Downtown Toronto", time:"7 PM", desc:"Indie live performances." },
+  { title:"Street Food Fest", category:"Food", location:"Scarborough", time:"12 PM", desc:"Local food trucks & vendors." },
+  { title:"Art Walk", category:"Art", location:"Queen West", time:"3 PM", desc:"Murals and gallery tour." },
+  { title:"Basketball Night", category:"Sports", location:"North York YMCA", time:"6:30 PM", desc:"Pickup basketball games." }
+];
+
+const grid = document.getElementById("event-grid");
+
+function showEvents(list) {
+  grid.innerHTML = "";
+  list.forEach(e => {
+    const c = document.createElement("div");
+    c.className = "event-card";
+    c.innerHTML = `
+      <div class="event-title">${e.title}</div>
+      <div class="event-meta">${e.category}</div>
+      <div class="event-meta">${e.location}</div>
+      <div class="event-meta">${e.time}</div>
+    `;
+    c.onclick = () => openModal(e);
+    grid.appendChild(c);
+  });
+}
+
+showEvents(events);
+
+document.getElementById("search-btn").onclick = () => {
+  const cat = document.getElementById("category").value;
+  const loc = document.getElementById("location").value.toLowerCase();
+  const filtered = events.filter(e =>
+    (cat === "" || e.category === cat) &&
+    (loc === "" || e.location.toLowerCase().includes(loc))
+  );
+  showEvents(filtered);
+};
+
+document.querySelectorAll("nav button").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+    document.getElementById(btn.dataset.sec).classList.add("active");
+  };
+});
+
+document.querySelectorAll(".auth-tab").forEach(tab => {
+  tab.onclick = () => {
+    document.querySelectorAll(".auth-tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    document.querySelectorAll(".auth-form").forEach(f => f.classList.remove("active"));
+    document.getElementById(tab.dataset.form).classList.add("active");
+  };
+});
+
+function openModal(e) {
+  document.getElementById("m-title").textContent = e.title;
+  document.getElementById("m-cat").textContent = e.category;
+  document.getElementById("m-loc").textContent = e.location;
+  document.getElementById("m-time").textContent = e.time;
+  document.getElementById("m-desc").textContent = e.desc;
+  document.getElementById("modal").classList.add("active");
+}
+
+function closeModal() {
+  document.getElementById("modal").classList.remove("active");
+}
+</script>
+
+</body>
+</html>
