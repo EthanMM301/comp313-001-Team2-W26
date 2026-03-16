@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>GoLocal</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f5f5f5;
+}
+header {
+  background: #ff7a18;
+  padding: 16px;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+nav button {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  padding: 8px 14px;
+  border-radius: 20px;
+  color: white;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-left: 6px;
+}
+nav button.active {
+  background: white;
+  color: #ff7a18;
+}
+main {
+  max-width: 900px;
+  margin: 20px auto;
+  padding: 0 15px;
+}
+.section { display: none; }
+.section.active { display: block; }
+.card {
+  background: white;
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+input, select, textarea {
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+  margin-top: 8px;
+  font-family: Arial, sans-serif;
+}
+textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+.search-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+  margin-top: 10px;
+}
+button.primary {
+  background: #ff7a18;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+}
+button.primary:hover { background: #e06010; }
+button.secondary {
+  background: #888;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+}
+button.secondary:hover { background: #666; }
+button.danger {
+  background: #e53935;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+}
+button.danger:hover { background: #c62828; }
+.event-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px,1fr));
+  gap: 12px;
+}
+.event-card {
+  background: white;
+  padding: 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid #eee;
+  position: relative;
+}
+.event-card:hover { background: #fafafa; }
+.event-title { font-weight: bold; margin-top: 5px; }
+.event-meta { font-size: 0.85rem; color: #555; margin-top: 2px; }
+.fav-icon {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+.auth-tabs {
+  display: flex;
+  gap: 8px;
+  background: #eee;
+  padding: 4px;
+  border-radius: 20px;
+}
+.auth-tab {
+  flex: 1;
+  text-align: center;
+  padding: 8px 0;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.auth-tab.active { background: white; }
+.auth-form { display: none; margin-top: 10px; }
+.auth-form.active { display: block; }
+.modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+.modal-bg.active { display: flex; }
+.modal-box {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  width: 380px;
+}
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.form-label {
+  font-size: 0.85rem;
+  color: #444;
+  margin-top: 12px;
+  display: block;
+}
+.empty-msg {
+  color: #888;
+  text-align: center;
+  padding: 30px 0;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h2 style="margin:0;">GoLocal</h2>
+  <nav>
+    <button class="active" data-sec="search-sec">Search</button>
+    <button id="create-btn" data-sec="create-sec" style="display:none;">+ Create Event</button>
+    <button id="favs-btn" data-sec="favs-sec" style="display:none;">❤ Favorites</button>
+    <button id="auth-btn" data-sec="auth-sec">Login</button>
+    <button id="logout-btn" style="display:none;">Logout</button>
+  </nav>
+</header>
+
+<main>
+
+<!-- SEARCH SECTION -->
+<section id="search-sec" class="section active">
+  <div class="card">
+    <h3>Search Events</h3>
+    <div class="search-grid">
+      <select id="category">
+        <option value="">All</option>
+        <option>Music</option>
+        <option>Sports</option>
+        <option>Art</option>
+        <option>Food</option>
+        <option>Other</option>
+      </select>
+      <input id="location" type="text" placeholder="Location">
+      <button class="primary" id="search-btn">Search</button>
+    </div>
+  </div>
+  <h3 style="margin-bottom:8px;">Results</h3>
+  <div class="event-grid" id="event-grid"></div>
+</section>
+
+<!-- FAVORITES SECTION -->
+<section id="favs-sec" class="section">
+  <h3>My Favorites</h3>
+  <div class="event-grid" id="favs-grid"></div>
+</section>
+
+<!-- CREATE EVENT SECTION -->
+<section id="create-sec" class="section">
+  <div class="card">
+    <h3>Create an Event</h3>
+    <form id="create-event-form">
+      <label class="form-label">Title</label>
+      <input id="ev-title" type="text" placeholder="Event title" required>
+      <label class="form-label">Category</label>
+      <select id="ev-category">
+        <option value="">Select category</option>
+        <option>Music</option>
+        <option>Sports</option>
+        <option>Art</option>
+        <option>Food</option>
+        <option>Other</option>
+      </select>
+      <label class="form-label">Location</label>
+      <input id="ev-location" type="text" placeholder="Event location" required>
+      <label class="form-label">Date & Time</label>
+      <input id="ev-datetime" type="datetime-local" required>
+      <label class="form-label">Description</label>
+      <textarea id="ev-desc" placeholder="Describe your event..."></textarea>
+      <button type="submit" class="primary" style="margin-top:16px; width:100%;">Create Event</button>
+      <div id="create-msg" style="margin-top:8px;"></div>
+    </form>
+  </div>
+</section>
+
+<!-- AUTH SECTION -->
+<section id="auth-sec" class="section">
+  <div class="card">
+    <div class="auth-tabs">
+      <div class="auth-tab active" data-form="login">Login</div>
+      <div class="auth-tab" data-form="signup">Sign Up</div>
+    </div>
+    <form id="login" class="auth-form active">
+      <input id="login-email" type="text" placeholder="Email">
+      <input id="login-password" type="password" placeholder="Password">
+      <button type="submit" class="primary" style="margin-top:10px;">Login</button>
+      <div id="login-msg" style="margin-top:8px;"></div>
+    </form>
+    <form id="signup" class="auth-form">
+      <input id="signup-name" type="text" placeholder="Name">
+      <input id="signup-email" type="text" placeholder="Email">
+      <input id="signup-password" type="password" placeholder="Password">
+      <button type="submit" class="primary" style="margin-top:10px;">Create Account</button>
+      <div id="signup-msg" style="margin-top:8px;"></div>
+    </form>
+  </div>
+</section>
+
+</main>
+
+<!-- EVENT MODAL -->
+<div class="modal-bg" id="modal">
+  <div class="modal-box">
+    <h3 id="m-title"></h3>
+    <p id="m-cat" style="color:#777; margin:4px 0;"></p>
+    <p id="m-loc" style="margin:4px 0;">📍 <span></span></p>
+    <p id="m-time" style="margin:4px 0;">🕐 <span></span></p>
+    <p id="m-desc" style="margin-top:10px;"></p>
+    <div class="modal-actions">
+      <button id="rsvp-btn" class="primary" style="display:none;">RSVP</button>
+      <button id="fav-btn" class="primary" style="display:none;">❤ Favorite</button>
+      <button class="secondary" onclick="closeModal()">Close</button>
+    </div>
+    <div id="modal-msg" style="margin-top:8px; font-size:0.9rem;"></div>
+  </div>
+</div>
+
+<script>
+const API_BASE = "http://localhost:8080";
+let currentUser = null;
+let currentEvent = null;
+let allEvents = [];
+let userFavorites = [];
+
+// ---- LOAD EVENTS ----
+async function loadEvents() {
+  try {
+    const res = await fetch(`${API_BASE}/api/events/all`);
+    const backendEvents = await res.json();
+    allEvents = backendEvents;
+    showEvents(allEvents);
+  } catch (err) {
+    showEvents([]);
+  }
+}
+
+// ---- SHOW EVENTS ----
+async function showEvents(list) {
+  const grid = document.getElementById("event-grid");
+  grid.innerHTML = "";
+  if (list.length === 0) {
+    grid.innerHTML = "<p class='empty-msg'>No events found.</p>";
+    return;
+  }
+  for (const e of list) {
+    const isFav = userFavorites.some(f => f.eventId === e.id);
+    const c = document.createElement("div");
+    c.className = "event-card";
+    c.innerHTML = `
+      <div class="event-title">${e.title || ""}</div>
+      <div class="event-meta">${e.category || ""}</div>
+      <div class="event-meta">${e.location || ""}</div>
+      <div class="event-meta">${e.dateTime || ""}</div>
+      ${currentUser ? `<span class="fav-icon" data-id="${e.id}">${isFav ? "❤️" : "🤍"}</span>` : ""}
+    `;
+    c.querySelector(".event-title").onclick = () => openModal(e);
+    c.querySelector(".event-meta") && c.querySelectorAll(".event-meta").forEach(m => m.onclick = () => openModal(e));
+    if (currentUser) {
+      const favIcon = c.querySelector(".fav-icon");
+      favIcon.onclick = (ev) => {
+        ev.stopPropagation();
+        toggleFavorite(e, favIcon);
+      };
+    }
+    grid.appendChild(c);
+  }
+}
+
+// ---- SEARCH ----
+document.getElementById("search-btn").onclick = () => {
+  const cat = document.getElementById("category").value;
+  const loc = document.getElementById("location").value.toLowerCase();
+  const filtered = allEvents.filter(e =>
+    (cat === "" || e.category === cat) &&
+    (loc === "" || (e.location || "").toLowerCase().includes(loc))
+  );
+  showEvents(filtered);
+};
+
+// ---- NAV ----
+document.querySelectorAll("nav button[data-sec]").forEach(btn => {
+  btn.onclick = () => {
+    if (btn.dataset.sec === "create-sec" && !currentUser) {
+      alert("Please log in to create an event.");
+      return;
+    }
+    if (btn.dataset.sec === "favs-sec" && currentUser) {
+      loadFavorites();
+    }
+    document.querySelectorAll("nav button[data-sec]").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+    document.getElementById(btn.dataset.sec).classList.add("active");
+  };
+});
+
+// ---- AUTH TABS ----
+document.querySelectorAll(".auth-tab").forEach(tab => {
+  tab.onclick = () => {
+    document.querySelectorAll(".auth-tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    document.querySelectorAll(".auth-form").forEach(f => f.classList.remove("active"));
+    document.getElementById(tab.dataset.form).classList.add("active");
+  };
+});
+
+// ---- SIGNUP ----
+document.getElementById("signup").onsubmit = async (e) => {
+  e.preventDefault();
+  const name = document.getElementById("signup-name").value;
+  const email = document.getElementById("signup-email").value;
+  const password = document.getElementById("signup-password").value;
+  const msg = document.getElementById("signup-msg");
+  try {
+    const res = await fetch(`${API_BASE}/api/users/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password })
+    });
+    if (res.ok) {
+      msg.style.color = "green";
+      msg.textContent = "Account created! Please log in.";
+      document.getElementById("signup-name").value = "";
+      document.getElementById("signup-email").value = "";
+      document.getElementById("signup-password").value = "";
+      setTimeout(() => { document.querySelector('[data-form="login"]').click(); msg.textContent = ""; }, 1500);
+    } else {
+      msg.style.color = "red";
+      msg.textContent = "Signup failed. Try again.";
+    }
+  } catch (err) {
+    msg.style.color = "red";
+    msg.textContent = "Cannot connect to server.";
+  }
+};
+
+// ---- LOGIN ----
+document.getElementById("login").onsubmit = async (e) => {
+  e.preventDefault();
+  const email = document.getElementById("login-email").value;
+  const password = document.getElementById("login-password").value;
+  const msg = document.getElementById("login-msg");
+  try {
+    const res = await fetch(`${API_BASE}/api/users/all`);
+    const users = await res.json();
+    const user = users.find(u => u.email === email && u.password === password);
+    if (user) {
+      currentUser = user;
+      await loadUserFavorites();
+      msg.style.color = "green";
+      msg.textContent = `Welcome, ${user.name}!`;
+      document.getElementById("create-btn").style.display = "inline-block";
+      document.getElementById("favs-btn").style.display = "inline-block";
+      document.getElementById("logout-btn").style.display = "inline-block";
+      document.getElementById("auth-btn").style.display = "none";
+      setTimeout(() => {
+        document.querySelector('[data-sec="search-sec"]').click();
+        loadEvents();
+        msg.textContent = "";
+      }, 1500);
+    } else {
+      msg.style.color = "red";
+      msg.textContent = "Invalid email or password.";
+    }
+  } catch (err) {
+    msg.style.color = "red";
+    msg.textContent = "Cannot connect to server.";
+  }
+};
+
+// ---- LOGOUT ----
+document.getElementById("logout-btn").onclick = () => {
+  currentUser = null;
+  userFavorites = [];
+  document.getElementById("create-btn").style.display = "none";
+  document.getElementById("favs-btn").style.display = "none";
+  document.getElementById("logout-btn").style.display = "none";
+  document.getElementById("auth-btn").style.display = "inline-block";
+  document.querySelector('[data-sec="search-sec"]').click();
+  loadEvents();
+};
+
+// ---- CREATE EVENT ----
+document.getElementById("create-event-form").onsubmit = async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById("create-msg");
+  const title = document.getElementById("ev-title").value;
+  const category = document.getElementById("ev-category").value;
+  const location = document.getElementById("ev-location").value;
+  const dateTime = document.getElementById("ev-datetime").value;
+  const description = document.getElementById("ev-desc").value;
+  try {
+    const res = await fetch(`${API_BASE}/api/events/create`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, category, location, dateTime, description })
+    });
+    if (res.ok) {
+      msg.style.color = "green";
+      msg.textContent = "Event created successfully!";
+      document.getElementById("ev-title").value = "";
+      document.getElementById("ev-category").value = "";
+      document.getElementById("ev-location").value = "";
+      document.getElementById("ev-datetime").value = "";
+      document.getElementById("ev-desc").value = "";
+      setTimeout(() => {
+        msg.textContent = "";
+        loadEvents();
+        document.querySelector('[data-sec="search-sec"]').click();
+      }, 1500);
+    } else {
+      msg.style.color = "red";
+      msg.textContent = "Failed to create event.";
+    }
+  } catch (err) {
+    msg.style.color = "red";
+    msg.textContent = "Cannot connect to server.";
+  }
+};
+
+// ---- FAVORITES ----
+async function loadUserFavorites() {
+  if (!currentUser) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/favorites/user/${currentUser.id}`);
+    if (res.ok) userFavorites = await res.json();
+  } catch (err) {
+    userFavorites = [];
+  }
+}
+
+async function loadFavorites() {
+  const grid = document.getElementById("favs-grid");
+  grid.innerHTML = "<p class='empty-msg'>Loading...</p>";
+  try {
+    await loadUserFavorites();
+    if (userFavorites.length === 0) {
+      grid.innerHTML = "<p class='empty-msg'>No favorites yet. Click 🤍 on an event to save it!</p>";
+      return;
+    }
+    grid.innerHTML = "";
+    for (const fav of userFavorites) {
+      try {
+        const res = await fetch(`${API_BASE}/api/events/${fav.eventId}`);
+        const e = await res.json();
+        const c = document.createElement("div");
+        c.className = "event-card";
+        c.innerHTML = `
+          <div class="event-title">${e.title || ""}</div>
+          <div class="event-meta">${e.category || ""}</div>
+          <div class="event-meta">${e.location || ""}</div>
+          <div class="event-meta">${e.dateTime || ""}</div>
+          <span class="fav-icon">❤️</span>
+        `;
+        c.onclick = () => openModal(e);
+        grid.appendChild(c);
+      } catch (err) {}
+    }
+  } catch (err) {
+    grid.innerHTML = "<p class='empty-msg'>Could not load favorites.</p>";
+  }
+}
+
+async function toggleFavorite(e, iconEl) {
+  if (!currentUser) return;
+  const isFav = userFavorites.some(f => f.eventId === e.id);
+  try {
+    if (isFav) {
+      await fetch(`${API_BASE}/api/favorites/remove`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: currentUser.id, eventId: e.id })
+      });
+      userFavorites = userFavorites.filter(f => f.eventId !== e.id);
+      iconEl.textContent = "🤍";
+    } else {
+      const res = await fetch(`${API_BASE}/api/favorites/add`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: currentUser.id, eventId: e.id })
+      });
+      if (res.ok) {
+        const newFav = await res.json();
+        userFavorites.push(newFav);
+        iconEl.textContent = "❤️";
+      }
+    }
+    // Update fav button in modal if open
+    if (currentEvent && currentEvent.id === e.id) {
+      const favBtn = document.getElementById("fav-btn");
+      favBtn.textContent = isFav ? "❤ Favorite" : "💔 Unfavorite";
+    }
+  } catch (err) {
+    console.error("Favorite error:", err);
+  }
+}
+
+// ---- MODAL ----
+let currentEventId = null;
+
+async function openModal(e) {
+  currentEvent = e;
+  currentEventId = e.id || null;
+  document.getElementById("m-title").textContent = e.title || "";
+  document.getElementById("m-cat").textContent = e.category || "";
+  document.getElementById("m-loc").querySelector("span").textContent = e.location || "";
+  document.getElementById("m-time").querySelector("span").textContent = e.dateTime || e.time || "";
+  document.getElementById("m-desc").textContent = e.description || e.desc || "";
+  document.getElementById("modal-msg").textContent = "";
+
+  const rsvpBtn = document.getElementById("rsvp-btn");
+  const favBtn = document.getElementById("fav-btn");
+
+  if (currentUser && currentEventId) {
+    // RSVP button
+    rsvpBtn.style.display = "inline-block";
+    try {
+      const res = await fetch(`${API_BASE}/api/rsvp/check?userId=${currentUser.id}&eventId=${currentEventId}`);
+      const hasRsvp = await res.json();
+      rsvpBtn.textContent = hasRsvp ? "Cancel RSVP ✓" : "RSVP";
+      rsvpBtn.className = hasRsvp ? "danger" : "primary";
+      rsvpBtn.onclick = () => hasRsvp ? cancelRsvp() : addRsvp();
+    } catch (err) {
+      rsvpBtn.style.display = "none";
+    }
+
+    // Favorite button
+    favBtn.style.display = "inline-block";
+    const isFav = userFavorites.some(f => f.eventId === currentEventId);
+    favBtn.textContent = isFav ? "💔 Unfavorite" : "❤ Favorite";
+    favBtn.onclick = () => toggleFavoriteModal(e);
+  } else {
+    rsvpBtn.style.display = "none";
+    favBtn.style.display = "none";
+  }
+
+  document.getElementById("modal").classList.add("active");
+}
+
+async function toggleFavoriteModal(e) {
+  const favBtn = document.getElementById("fav-btn");
+  const isFav = userFavorites.some(f => f.eventId === e.id);
+  await toggleFavorite(e, { textContent: "" });
+  const nowFav = userFavorites.some(f => f.eventId === e.id);
+  favBtn.textContent = nowFav ? "💔 Unfavorite" : "❤ Favorite";
+  document.getElementById("modal-msg").style.color = nowFav ? "green" : "orange";
+  document.getElementById("modal-msg").textContent = nowFav ? "Added to favorites!" : "Removed from favorites.";
+  loadEvents();
+}
+
+async function addRsvp() {
+  const msg = document.getElementById("modal-msg");
+  const rsvpBtn = document.getElementById("rsvp-btn");
+  try {
+    const res = await fetch(`${API_BASE}/api/rsvp/add`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: currentUser.id, eventId: currentEventId })
+    });
+    if (res.ok) {
+      msg.style.color = "green";
+      msg.textContent = "You're going! RSVP confirmed ✓";
+      rsvpBtn.textContent = "Cancel RSVP ✓";
+      rsvpBtn.className = "danger";
+      rsvpBtn.onclick = cancelRsvp;
+    }
+  } catch (err) {
+    msg.style.color = "red";
+    msg.textContent = "Could not RSVP. Try again.";
+  }
+}
+
+async function cancelRsvp() {
+  const msg = document.getElementById("modal-msg");
+  const rsvpBtn = document.getElementById("rsvp-btn");
+  try {
+    const res = await fetch(`${API_BASE}/api/rsvp/remove?userId=${currentUser.id}&eventId=${currentEventId}`, {
+      method: "DELETE"
+    });
+    if (res.ok) {
+      msg.style.color = "orange";
+      msg.textContent = "RSVP cancelled.";
+      rsvpBtn.textContent = "RSVP";
+      rsvpBtn.className = "primary";
+      rsvpBtn.onclick = addRsvp;
+    }
+  } catch (err) {
+    msg.style.color = "red";
+    msg.textContent = "Could not cancel. Try again.";
+  }
+}
+
+function closeModal() {
+  document.getElementById("modal").classList.remove("active");
+  currentEvent = null;
+  currentEventId = null;
+}
+
+// ---- INIT ----
+loadEvents();
+</script>
+
+</body>
+</html>
